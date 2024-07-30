@@ -1,5 +1,4 @@
-# from langchain_chroma import Chroma
-# from langchain.vectorstores import Chroma
+import json
 import os
 from langchain_community.vectorstores import Chroma
 from langchain_community.document_loaders import PyPDFLoader
@@ -7,29 +6,27 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_community.chat_models import ChatOllama
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.embeddings.huggingface import HuggingFaceEmbeddings
-from langchain_community.embeddings import OllamaEmbeddings
-from langchain_community.embeddings import SentenceTransformerEmbeddings
 
 from langchain.chains import create_retrieval_chain
 from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain.schema import Document
 
 repo_dir = os.path.dirname(os.path.abspath(__file__))
 file_path = os.path.join(repo_dir, "../files/bag-stories.pdf")
+embedding_cache_path = os.path.join(repo_dir, "embedding_cache.json")
 
 
 class PdfSummary:
-    # Construct the full path to the PDF file
-
     _path = os.path.normpath(file_path)
 
     _llm = ChatOllama(model="llama3")
     _system_prompt = (
         "You are an experienced content creator."
-        "Use the following pieces of retrieved context to create a blog post"
-        "The content must be interesting,appealed and readable for user."
-        "if you do not know about question context, say you don't know and do not request for more information."
-        "Your blog post must be two paragraph maximum."
-        "answer concise."
+        "Use the following pieces of retrieved context to create a blog post."
+        "The content must be interesting, appealed and readable for the user."
+        "If you do not know about the question context, say you don't know and do not request more information."
+        "Your blog post must be two paragraphs maximum."
+        "Answer concisely."
         "\n\n"
         "{context}"
     )
@@ -43,23 +40,62 @@ class PdfSummary:
     @classmethod
     def _pdf_extract(cls):
         loader = PyPDFLoader(cls._path)
-
         docs = loader.load()
         return docs
 
     @classmethod
+    def _load_embeddings(cls):
+        if os.path.exists(embedding_cache_path):
+            with open(embedding_cache_path, "r") as f:
+                cached_data = json.load(f)
+                documents = [Document(**doc) for doc in cached_data["documents"]]
+                embeddings = cached_data["embeddings"]
+                return documents, embeddings
+        return None, None
+
+    @classmethod
+    def _save_embeddings(cls, documents, embeddings):
+        with open(embedding_cache_path, "w") as f:
+            json.dump(
+                {
+                    "documents": [
+                        {"page_content": doc.page_content, "metadata": doc.metadata}
+                        for doc in documents
+                    ],
+                    "embeddings": embeddings,
+                },
+                f,
+            )
+
+    @classmethod
     def _embedder_retriever(cls):
-        docs = cls._pdf_extract()
-        text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=1000, chunk_overlap=200
-        )
-        splits = text_splitter.split_documents(docs)
-        vectorstore = Chroma.from_documents(
-            documents=splits, embedding=SentenceTransformerEmbeddings()
-        )
+        documents, embeddings = cls._load_embeddings()
+        embedding_model = HuggingFaceEmbeddings()
+
+        if documents and embeddings:
+            print(
+                "documentandembeddingsdocumentandembeddingsdocumentandembeddingsdocumentandembeddingsdocumentandembeddingsdocumentandembeddingsdocumentandembeddings"
+            )
+            vectorstore = Chroma.from_texts(
+                texts=[doc.page_content for doc in documents],
+                embedding=embedding_model,
+                metadatas=[doc.metadata for doc in documents],
+            )
+        else:
+            docs = cls._pdf_extract()
+            text_splitter = RecursiveCharacterTextSplitter(
+                chunk_size=1000, chunk_overlap=200
+            )
+            splits = text_splitter.split_documents(docs)
+            embeddings = embedding_model.embed_documents(
+                [split.page_content for split in splits]
+            )
+            cls._save_embeddings(splits, embeddings)
+            vectorstore = Chroma.from_documents(
+                documents=splits, embedding=embedding_model
+            )
 
         retriever = vectorstore.as_retriever()
-
         return retriever
 
     @classmethod
@@ -70,8 +106,8 @@ class PdfSummary:
 
         results = rag_chain.invoke(
             {
-                "input": "Create a blogpost about handbag styles and identities of their owners. "
+                "input": "Create a blog post about handbag styles and identities of their owners."
             }
         )
-        # print(results["answer"], "aaaanssssssweeeer")
+
         return results["answer"]
