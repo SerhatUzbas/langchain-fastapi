@@ -10,6 +10,7 @@ from langchain_community.embeddings.huggingface import HuggingFaceEmbeddings
 from langchain.chains import create_retrieval_chain
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain.schema import Document
+import asyncio
 
 repo_dir = os.path.dirname(os.path.abspath(__file__))
 file_path = os.path.join(repo_dir, "../files/bag-stories.pdf")
@@ -73,9 +74,7 @@ class PdfSummary:
         embedding_model = HuggingFaceEmbeddings()
 
         if documents and embeddings:
-            print(
-                "documentandembeddingsdocumentandembeddingsdocumentandembeddingsdocumentandembeddingsdocumentandembeddingsdocumentandembeddingsdocumentandembeddings"
-            )
+
             vectorstore = Chroma.from_texts(
                 texts=[doc.page_content for doc in documents],
                 embedding=embedding_model,
@@ -99,7 +98,7 @@ class PdfSummary:
         return retriever
 
     @classmethod
-    def create_post(cls):
+    async def create_post(cls):
         retriever = cls._embedder_retriever()
         question_answer_chain = create_stuff_documents_chain(cls._llm, cls._prompt)
         rag_chain = create_retrieval_chain(retriever, question_answer_chain)
@@ -111,3 +110,17 @@ class PdfSummary:
         )
 
         return results["answer"]
+
+    @classmethod
+    async def create_post_stream(cls):
+        retriever = cls._embedder_retriever()
+        question_answer_chain = create_stuff_documents_chain(cls._llm, cls._prompt)
+        rag_chain = create_retrieval_chain(retriever, question_answer_chain)
+
+        async for chunk in rag_chain.astream(
+            {
+                "input": "Create a blog post about handbag styles and identities of their owners."
+            }
+        ):
+            if "answer" in chunk:
+                yield chunk["answer"]
