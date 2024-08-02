@@ -1,18 +1,20 @@
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 
+from repository.database_rag import DatabaseRag
 from repository.pdf_summary import PdfSummary
 
 
 router = APIRouter(
-    tags=["pdf_summary"],
+    tags=["database-rag"],
 )
 
 
 @router.get("/")
 async def get():
-    summary = await PdfSummary.create_post()
-    return {"pdf_summary": summary}
+    # result = await DatabaseRag.execute()
+    result = DatabaseRag.execute()
+    return {"pdf_summary": result}
 
 
 @router.get("/stream")

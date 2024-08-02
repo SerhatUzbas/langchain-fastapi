@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import pdf_summary
+
+from routers import database_rag, pdf_summary
 
 app = FastAPI()
 
@@ -23,3 +24,4 @@ async def read_item(item_id):
 
 
 app.include_router(pdf_summary.router, prefix="/api/pdf-summary")
+app.include_router(database_rag.router, prefix="/api/database-rag")
