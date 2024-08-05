@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 
-from repository.database_rag import DatabaseRag
+from repository.database_rag import DatabaseChainRag, DatabaseRag
 from repository.pdf_summary import PdfSummary
 
 
