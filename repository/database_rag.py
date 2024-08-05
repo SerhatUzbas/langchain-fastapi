@@ -1,3 +1,4 @@
+import os
 from sqlalchemy import create_engine
 from langchain_community.agent_toolkits import SQLDatabaseToolkit
 
@@ -21,11 +22,21 @@ from langchain_openai import ChatOpenAI
 # from langchain_core.runnables import RunnableSequence
 from langchain.chains import create_sql_query_chain
 
+from lib.helpers import (
+    format_columns_and_foreign_keys,
+    get_columns_and_foreign_keys,
+    get_foreign_keys,
+)
 
-class DatabaseRag:
+SQLALCHEMY_DATABASE_URL = os.environ["SQLALCHEMY_DATABASE_URL"]
 
-    _database_uri = "postgresql+psycopg2://rami-dev-user:WsGnaS0Ks8cjx@192.168.20.108/rami-service-dev"
+
+class DatabaseAgentRag:
+
+    _database_uri = SQLALCHEMY_DATABASE_URL
     _db = SQLDatabase.from_uri(database_uri=_database_uri)
+    _columns_and_fks = get_columns_and_foreign_keys()
+    _formatted_output = format_columns_and_foreign_keys(_columns_and_fks)
     _system_message = SystemMessage(
         content="""You are an agent designed to interact with a SQL database.
     Given an input question, create a syntactically correct Postgresql query to run, then look at the results of the query and return the answer.
@@ -39,11 +50,13 @@ class DatabaseRag:
     DO NOT make any DML statements (INSERT, UPDATE, DELETE, DROP etc.) to the database.
 
     You have access to the following tables: {table_names}
+    Tables relations are: {tables_relations}
 
     If you need to filter on a proper noun, you must ALWAYS first look up the filter value using the "search_proper_nouns" tool!
     Do not try to guess at the proper name - use this function to find similar ones.""".format(
-            table_names=_db.get_usable_table_names()
-        )
+            table_names=_db.get_usable_table_names(),
+            tables_relations=_formatted_output,
+        ),
     )
 
     # _engine = create_engine(_database_uri)
@@ -108,10 +121,13 @@ class DatabaseRag:
         # print(self._tools, "toools")
         # print(self._agent_executor, "_agent_executor")
         # print(self._toolkit, "toolkits")
-        response = self._agent_executor.invoke(
-            {"messages": "How many events will happen on zoom?"}
-        )
-        print(response)
+
+        # response = self._agent_executor.invoke(
+        #     {"messages": "How many events will happen on zoom?"}
+        # )
+        # print(response)
+
+        print(self._formatted_output)
         # for s in self._agent_executor.stream(
         #     {
         #         "messages": [
@@ -124,7 +140,7 @@ class DatabaseRag:
 
 
 class DatabaseChainRag:
-    _database_uri = "postgresql+psycopg2://rami-dev-user:WsGnaS0Ks8cjx@192.168.20.108/rami-service-dev"
+    _database_uri = SQLALCHEMY_DATABASE_URL
     _db = SQLDatabase.from_uri(database_uri=_database_uri)
 
     # _engine = create_engine(_database_uri)
