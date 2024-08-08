@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 
-from repository.database_rag import DatabaseChainRag, DatabaseRag
+from repository.database_rag import DatabaseAgentRag, DatabaseChainRag
 from repository.pdf_summary import PdfSummary
 
 
@@ -13,7 +13,7 @@ router = APIRouter(
 @router.get("/")
 async def get():
     # result = await DatabaseRag.execute()
-    result = DatabaseRag.execute()
+    result = DatabaseAgentRag.execute()
     return {"pdf_summary": result}
 
 

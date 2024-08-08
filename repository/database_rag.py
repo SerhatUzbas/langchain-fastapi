@@ -49,64 +49,35 @@ class DatabaseAgentRag:
 
     DO NOT make any DML statements (INSERT, UPDATE, DELETE, DROP etc.) to the database.
 
-    You have access to the following tables: {table_names}
-    Tables relations are: {tables_relations}
-
-    If you need to filter on a proper noun, you must ALWAYS first look up the filter value using the "search_proper_nouns" tool!
-    Do not try to guess at the proper name - use this function to find similar ones.""".format(
+    DO NOT give sql query as a result. Your result must be sql query result.
+    
+    # You have access to the following tables: {table_names}
+    # Tables relations are: {tables_relations}
+    
+    """.format(
             table_names=_db.get_usable_table_names(),
             tables_relations=_formatted_output,
         ),
     )
 
-    # _engine = create_engine(_database_uri)
-
     _llm = ChatOllama(model="llama3.1")
 
-    # _llm = ChatOpenAI(
-    #     api_key="ollama",
-    #     model="llama3",
-    #     base_url="http://localhost:11434/v1",
-    # )
-
-    # _llm = OllamaFunctions(model="llama3-groq-tool-use")
     _toolkit = SQLDatabaseToolkit(db=_db, llm=_llm)
 
     _tools = _toolkit.get_tools()
 
     _llm = _llm.bind_tools(_tools)
 
-    # _prompt_template = ChatPromptTemplate.from_messages(
-    #     [
-    #         ("system", _system_message),
-    #         ("human", "{input}"),
-    #     ]
-    # )
-
     _prompt_template = PromptTemplate(
         input_variables=["question"],
         template="Question: {question}\nSQL query: ",
     )
 
-    # Create the LLM chain with the prompt template
-    # _llm_chain = LLMChain(llm=_llm, prompt=_prompt_template)
-
     _runnable_sequence = _prompt_template | _llm | StrOutputParser()
 
-    # _agent = create_react_agent(tools=_tools, model=_runnable_sequence,messages_modifier=_system_message)
-
-    # _agent = create_react_agent(
-    #     tools=_tools,
-    #     model=_runnable_sequence,
-    #     messages_modifier=_system_message,
-    # )
     _agent_executor = create_react_agent(
         _llm, _tools, messages_modifier=_system_message
     )
-
-    # _agent = initialize_agent(tools=_tools, llm=_llm_chain, verbose=True)
-
-    # _agent_executor = AgentExecutor(agent=_agent, tools=_tools, verbose=True)
 
     input_query = "How many events in event table?"
 
@@ -123,11 +94,12 @@ class DatabaseAgentRag:
         # print(self._toolkit, "toolkits")
 
         # response = self._agent_executor.invoke(
-        #     {"messages": "How many events will happen on zoom?"}
+        #     {"messages": "How many events will happen on november 2023?"}
         # )
         # print(response)
-
         print(self._formatted_output)
+
+        # print(self._formatted_output)
         # for s in self._agent_executor.stream(
         #     {
         #         "messages": [
