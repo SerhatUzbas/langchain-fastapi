@@ -5,7 +5,12 @@ from lib.helpers import format_columns_and_foreign_keys, get_columns_and_foreign
 from langchain_community.utilities import SQLDatabase
 from langchain_core.prompts import PromptTemplate
 from typing import Optional, Type
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+
+class Joke(BaseModel):
+    message: str = Field(description="explanation of postgresql query")
+    query: str = Field(description="postgresql query")
 
 
 class SchemaTool(BaseTool):
@@ -38,24 +43,24 @@ class QueryTool(BaseTool):
         question: str
         schema_info: str
 
-    def _run(
-        self,
-        question: str,
-        schema_info: str,
-    ) -> str:
+    def _run(self, question: str, schema_info: str, error: str) -> str:
         prompt = f"""
-        Based on the following schema information:
-
-        {schema_info}
-
-        Create a SQL query to answer the following question:
-        {question}
+        You are an agent designed to interact with a SQL database.
+        Then, Given an input question, create a syntactically correct Postgresql query to run.
+        Remember, table names always starts with public in postgres (e.g. public.libraries).
+        DO NOT make any DML statements (INSERT, UPDATE, DELETE, DROP etc.) to the database.
+        To start you should ALWAYS look at the schema information  to see what you can query.
+        Do NOT skip this step.
+        DO NOT make any any extra explanation. You SHOULD only give postgresql query.
+        Schema information: {schema_info}
+        Create a SQL query to answer the following question: {question}        
         """
 
+        if error:
+            prompt += f"\n\nPreviously encountered error: {error}"
+
         response = self.llm.invoke(input=prompt)
-
         content = response.content
-
         return content.strip()
 
 

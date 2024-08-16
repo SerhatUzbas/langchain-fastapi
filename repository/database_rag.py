@@ -131,7 +131,7 @@ class DatabaseChainRag:
 class SQLDatabaseAgent:
     def __init__(self, database_uri):
         self.db = SQLDatabase.from_uri(database_uri=database_uri)
-        self.llm = ChatOllama(model="llama3")
+        self.llm = ChatOllama(model="llama3.1")
 
         self.schema_tool = SchemaTool(db=self.db)
         self.query_tool = QueryTool(llm=self.llm)
@@ -146,20 +146,20 @@ class SQLDatabaseAgent:
         # print(schema_info)
 
         iteration = 0
-        last_error = None
+        last_error = ""
 
         while iteration < self.max_iterations:
             iteration += 1
             sql_query = self.query_tool.run(
-                {"question": question, "schema_info": schema_info}
+                {"question": question, "schema_info": schema_info, "error": last_error}
             )
-            print("\nGenerated SQL Query:")
-            print(sql_query)
+            # print("\nGenerated SQL Query:")
+            # print(sql_query)
 
             # Check the generated SQL query for correctness by attempting to execute it
             query_result = self.query_checker_tool.run({"query": sql_query})
-            print("\nQuery Result:")
-            print(query_result)
+            # print("\nQuery Result:")
+            # print(query_result)
 
             if "Error:" not in query_result:
                 print("\nQuery executed successfully.")
