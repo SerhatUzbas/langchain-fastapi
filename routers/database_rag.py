@@ -1,7 +1,12 @@
+import os
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 
-from repository.database_rag import DatabaseAgentRag, DatabaseChainRag
+from repository.database_rag import (
+    DatabaseAgentRag,
+    DatabaseChainRag,
+    SQLDatabaseAgent,
+)
 from repository.pdf_summary import PdfSummary
 
 
@@ -9,11 +14,16 @@ router = APIRouter(
     tags=["database-rag"],
 )
 
+SQLALCHEMY_DATABASE_URL = os.environ["SQLALCHEMY_DATABASE_URL"]
+
 
 @router.get("/")
 async def get():
     # result = await DatabaseRag.execute()
-    result = DatabaseAgentRag.execute()
+    # result = DBMONSTER.execute()
+    # result = DatabaseAgentRag.execute()
+    agent = SQLDatabaseAgent(SQLALCHEMY_DATABASE_URL)
+    result = agent.execute(question="How many users in database?")
     return {"pdf_summary": result}
 
 

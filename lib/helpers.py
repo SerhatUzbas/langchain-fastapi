@@ -85,7 +85,8 @@ def get_columns_and_foreign_keys():
     return columns_dict
 
 
-def format_columns_and_foreign_keys(columns_and_fks):
+def format_columns_and_foreign_keys():
+    columns_and_fks = get_columns_and_foreign_keys()
     formatted_output = ""
     for (schema, table), cols in columns_and_fks.items():
         formatted_output += f"Table: {schema}.{table}\n"
