@@ -3,8 +3,6 @@ from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 
 from repository.database_rag import (
-    DatabaseAgentRag,
-    DatabaseChainRag,
     SQLDatabaseAgent,
 )
 from repository.pdf_summary import PdfSummary
@@ -19,12 +17,10 @@ SQLALCHEMY_DATABASE_URL = os.environ["SQLALCHEMY_DATABASE_URL"]
 
 @router.get("/")
 async def get():
-    # result = await DatabaseRag.execute()
-    # result = DBMONSTER.execute()
-    # result = DatabaseAgentRag.execute()
+
     agent = SQLDatabaseAgent(SQLALCHEMY_DATABASE_URL)
-    result = agent.execute(question="How many users in database?")
-    return {"pdf_summary": result}
+    result = agent.execute(question="Get me the events will occur December 2023)")
+    return {"result": result}
 
 
 @router.get("/stream")

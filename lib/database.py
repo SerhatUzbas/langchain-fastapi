@@ -31,10 +31,12 @@ def get_db():
     db = SessionLocal()
     # db.expire_on_commit = False
     try:
+        print("Connextion opened")
         yield db
         db.commit()  # Explicitly commit the transaction
     except Exception as e:
         db.rollback()
         raise e
     finally:
+        print("Connextion closed")
         db.close()

@@ -33,9 +33,10 @@ from lib.helpers import (
     get_columns_and_foreign_keys,
     get_foreign_keys,
 )
-from tools.database import QueryCheckerTool, QueryTool, SchemaTool
+from tools.database import ExplanatorTool, QueryCheckerTool, QueryTool, SchemaTool
 
 SQLALCHEMY_DATABASE_URL = os.environ["SQLALCHEMY_DATABASE_URL"]
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 
 
 class DatabaseAgentRag:
@@ -131,39 +132,46 @@ class DatabaseChainRag:
 class SQLDatabaseAgent:
     def __init__(self, database_uri):
         self.db = SQLDatabase.from_uri(database_uri=database_uri)
-        self.llm = ChatOllama(model="llama3.1")
+        # self.llm = ChatOllama(model="llama3.1", temperature=0.2)
+        self.llm = ChatOpenAI(model="gpt-4o-mini", api_key=OPENAI_API_KEY)
 
         self.schema_tool = SchemaTool(db=self.db)
         self.query_tool = QueryTool(llm=self.llm)
         self.query_checker_tool = QueryCheckerTool(llm=self.llm, db=self.db)
+        self.explanator_tool = ExplanatorTool(
+            llm=self.llm,
+        )
 
         self.max_iterations = 5
 
     def execute(self, question: str):
-        # Step 1: Retrieve schema information
-        schema_info = self.schema_tool.run({})
-        # print("Schema Information:")
-        # print(schema_info)
-
+        schema_info, table_names = self.schema_tool.run({})
         iteration = 0
         last_error = ""
 
         while iteration < self.max_iterations:
             iteration += 1
             sql_query = self.query_tool.run(
-                {"question": question, "schema_info": schema_info, "error": last_error}
+                {
+                    "question": question,
+                    "schema_info": schema_info,
+                    "tables": table_names,
+                    "error": last_error,
+                }
             )
             # print("\nGenerated SQL Query:")
             # print(sql_query)
 
-            # Check the generated SQL query for correctness by attempting to execute it
             query_result = self.query_checker_tool.run({"query": sql_query})
-            # print("\nQuery Result:")
-            # print(query_result)
 
             if "Error:" not in query_result:
-                print("\nQuery executed successfully.")
-                return query_result
+                # print("\nQuery executed successfully.")
+                # print(query_result)
+                final_result = self.explanator_tool.run(
+                    {"question": question, "sql_query_result": query_result}
+                )
+                print(final_result)
+                return final_result
 
             else:
                 last_error = query_result
