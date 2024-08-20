@@ -1,38 +1,17 @@
 import os
-from langchain_community.tools.sql_database.tool import (
-    ListSQLDatabaseTool,
-    InfoSQLDatabaseTool,
-    QuerySQLDataBaseTool,
-    QuerySQLCheckerTool,
-)
 from sqlalchemy import create_engine
 from langchain_community.agent_toolkits import SQLDatabaseToolkit
-
-# from langchain_community.chat_models import ChatOllama
-
 from langchain_ollama import ChatOllama
-from langchain_experimental.llms.ollama_functions import OllamaFunctions
-
 from langchain.agents import AgentExecutor, initialize_agent
 from langgraph.prebuilt import create_react_agent
 from langchain_core.messages import SystemMessage
 from langchain_community.utilities import SQLDatabase
-from langchain_core.prompts import ChatPromptTemplate
-from langchain.prompts import PromptTemplate
-from langchain_core.output_parsers import StrOutputParser
-
-from langchain.chains import LLMChain
 from langchain_openai import ChatOpenAI
-from langchain import hub
-
-# from langchain_core.runnables import RunnableSequence
-from langchain.chains import create_sql_query_chain
 
 from lib.helpers import (
     format_columns_and_foreign_keys,
-    get_columns_and_foreign_keys,
-    get_foreign_keys,
 )
+
 from tools.database import ExplanatorTool, QueryCheckerTool, QueryTool, SchemaTool
 
 SQLALCHEMY_DATABASE_URL = os.environ["SQLALCHEMY_DATABASE_URL"]
@@ -68,10 +47,6 @@ class DatabaseAgentRag:
 
     _llm = _llm.bind_tools(_tools)
 
-    # _prompt_template = hub.pull("langchain-ai/sql-agent-system-prompt").format(
-    #     dialect="Postgres", top_k=5
-    # )
-
     _agent_executor = create_react_agent(
         _llm,
         _tools,
@@ -83,50 +58,12 @@ class DatabaseAgentRag:
     @classmethod
     def execute(self):
 
-        # response = self._agent_executor.invoke(
-        #     {"messages": "How many events will happen in november 2023?"},
-        #     {"recursion_limit": 40},
-        # )
-        # print(response)
-        # re = get_schema()
-
-        # print(de)
-        print(self._db)
-        # print(self._formatted_output)
-
-
-class DatabaseChainRag:
-    _database_uri = SQLALCHEMY_DATABASE_URL
-    _db = SQLDatabase.from_uri(database_uri=_database_uri)
-
-    # _engine = create_engine(_database_uri)
-
-    _llm = ChatOllama(model="llama3")
-
-    _prompt_template = PromptTemplate(
-        input_variables=["question"],
-        template="Question: {question}\nSQL query: ",
-    )
-
-    input_query = "How many events in event table?"
-
-    chain = create_sql_query_chain(_llm, _db)
-
-    @classmethod
-    def execute(self):
-        # print(self._toolkit, "_toolkit")
-        # print(self._tools, "_tools")
-        # print(self._llm, "_llm")
-        # print(self._llm_chain, "_llm_chain")
-        # print(self._agent, "_agent")
-        # return
-        # print(self._tools, "toools")
-        # print(self._agent_executor, "_agent_executor")
-        # print(self._toolkit, "toolkits")
-        # response = self.chain.invoke({"question": self.input_query})
-        # print(self._db.get_usable_table_names())
-        print(self._db.get_context())
-        # print(response)
+        response = self._agent_executor.invoke(
+            {"messages": "How many events will happen in november 2023?"},
+            {"recursion_limit": 40},
+        )
+        print(response)
+        return response
 
 
 class SQLDatabaseAgent:
