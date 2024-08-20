@@ -1,19 +1,60 @@
-# class SQLDatabaseAgent:
-#     def __init__(self, database_uri):
-#         self.db = SQLDatabase.from_uri(database_uri=database_uri)
-#         # self.llm = ChatOllama(model="llama3.1", temperature=0.2)
-#         self.llm = ChatOpenAI(model="gpt-4o-mini", api_key=OPENAI_API_KEY)
+from langchain_community.chat_models import ChatOllama
 
-#         self.schema_tool = SchemaTool(db=self.db)
-#         self.query_tool = QueryTool(llm=self.llm)
-#         self.query_checker_tool = QueryCheckerTool(llm=self.llm, db=self.db)
-#         self.explanator_tool = ExplanatorTool(
-#             llm=self.llm,
-#         )
+from repository.database_rag import SQLDatabaseAgent
+from repository.webbase_rag import WebLoaderRag
 
-#         self.max_iterations = 5
 
-#     def execute(self, question: str):
-#         schema_info, table_names = self.schema_tool.run({})
-#         iteration = 0
-#         last_error = ""
+class DeciderAgent:
+    def __init__(self, database_uri):
+        self.database_agent = SQLDatabaseAgent(database_uri)
+        self.web_agent = WebLoaderRag()
+        self.llm = ChatOllama(model="llama3")
+
+    def decide_agent(self, question: str) -> str:
+        # Step 1: Use LLM to classify the query or assess its relevance to each agent
+        classification_prompt = f"""
+        You are an intelligent assistant. Given the question below, classify it into one of two categories: 
+        1. Database-related: If the question is more related to library database, users,event details, data queries, SQL, or retrieving structured information from a database.
+        2. Web-related: If the question is more related to web content, Q&A, FAQs, or retrieving information from the Rami Library website.
+        
+        Question: "{question}"
+        
+        Answer only with "Database" or "Web".
+        """
+
+        classification_result = self.llm.invoke(input=classification_prompt)
+        classification = classification_result.content.strip().lower()
+
+        if classification == "database":
+            return "database"
+        elif classification == "web":
+            return "web"
+        else:
+            # Fallback logic if classification is ambiguous or uncertain
+            return "both"
+
+    async def execute(self, question: str):
+        decision = self.decide_agent(question)
+        if decision == "database":
+            return self.database_agent.execute(question)
+        elif decision == "web":
+            return await self.web_agent.answer_stream(question)
+        else:
+            # If both agents could handle it, run both and combine their results
+            db_result = self.database_agent.execute(question)
+            async for web_chunk in self.web_agent.answer_stream(question):
+                db_result += f"\n\n{web_chunk}"
+            return db_result
+
+    async def stream(self, question: str):
+        decision = self.decide_agent(question)
+        if decision == "database":
+            yield self.database_agent.execute(question)
+        elif decision == "web":
+            async for chunk in self.web_agent.answer_stream(question):
+                yield chunk
+        else:
+            # If both agents could handle it, stream results from both
+            yield self.database_agent.execute(question)
+            async for chunk in self.web_agent.answer_stream(question):
+                yield chunk
