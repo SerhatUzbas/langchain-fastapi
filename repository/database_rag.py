@@ -2,7 +2,6 @@ import os
 from sqlalchemy import create_engine
 from langchain_community.agent_toolkits import SQLDatabaseToolkit
 from langchain_ollama import ChatOllama
-from langchain.agents import AgentExecutor, initialize_agent
 from langgraph.prebuilt import create_react_agent
 from langchain_core.messages import SystemMessage
 from langchain_community.utilities import SQLDatabase
@@ -81,7 +80,7 @@ class SQLDatabaseAgent:
 
         self.max_iterations = 5
 
-    def execute(self, question: str):
+    async def execute(self, question: str):
         schema_info, table_names = self.schema_tool.run({})
         iteration = 0
         last_error = ""
@@ -101,20 +100,27 @@ class SQLDatabaseAgent:
 
             query_result = self.query_checker_tool.run({"query": sql_query})
 
-            if "Error:" not in query_result:
-                # print("\nQuery executed successfully.")
-                # print(query_result)
-                final_result = self.explanator_tool.run(
-                    {"question": question, "sql_query_result": query_result}
-                )
-                print(final_result)
-                return final_result
+            # if "Error:" not in query_result:
+            #     # print("\nQuery executed successfully.")
+            #     # print(query_result)
+            #     final_result = self.explanator_tool.run(
+            #         {"question": question, "sql_query_result": query_result}
+            #     )
+            #     print(final_result)
+            #     return final_result
 
+            if "Error:" not in query_result:
+                async for chunk in self.explanator_tool._run(
+                    question=question, sql_query_result=query_result
+                ):
+                    yield chunk
+                break
             else:
                 last_error = query_result
                 print("\nQuery failed. Retrying...")
-
-        print(
-            f"\nMax iterations reached ({self.max_iterations}). Last error: {last_error}"
-        )
-        return last_error
+                if iteration == self.max_iterations:
+                    print(
+                        f"\nMax iterations reached ({self.max_iterations}). Last error: {last_error}"
+                    )
+                    yield f"Max iterations reached ({self.max_iterations}). Last error: {last_error}"
+                    break

@@ -1,12 +1,8 @@
 from langchain_core.tools import tool, BaseTool
-from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
 from sqlalchemy import text
 from lib.database import get_db
-from lib.helpers import format_columns_and_foreign_keys, get_columns_and_foreign_keys
 from langchain_community.utilities import SQLDatabase
-from langchain_core.prompts import PromptTemplate
-from typing import Optional, Type
 from pydantic import BaseModel, Field
 import json
 
@@ -49,7 +45,7 @@ class QueryTool(BaseTool):
 
     def _run(self, question: str, schema_info: str, tables: str, error: str) -> str:
         prompt = f"""
-        You are an agent designed to interact with a SQL database.
+        You are an agent designed to interact with a SQL database of Rami Library.
         Then, Given an input question, create a syntactically correct Postgresql query to run.
         Remember, table names always starts with public in postgres (e.g. public.libraries).
         DO NOT make any DML statements (INSERT, UPDATE, DELETE, DROP etc.) to the database.
@@ -94,10 +90,7 @@ class QueryCheckerTool(BaseTool):
             query_data = json.loads(query)
             print(query_data, "contentntntntntntntntntntn")
             sql_query = query_data.get("query")
-            print(
-                sql_query,
-                "queryyyyqueryyyyqueryyyyqueryyyyqueryyyyqueryyyyqueryyyyqueryyyyqueryyyyqueryyyyqueryyyy",
-            )
+
             if not sql_query:
                 return "Error: No query found in the input JSON."
             # Attempt to execute the query
@@ -124,11 +117,14 @@ class ExplanatorTool(BaseTool):
         question: str
         sql_query_result: str
 
-    def _run(self, question: str, sql_query_result: str) -> str:
+    async def _run(self, question: str, sql_query_result: str):
         prompt = f"""
         You are an agent responsible from return best message to user througs its question.
         You will have the user question, sql query result.
         Your message MUST be easy to read, understandable from user, clean and direct.
+        "Make sure to include <h2> tags for titles, <h3> tags for subtitles, <p> tags for paragraphs,"
+        "<b> tags for bold text, and <br> tags for line breaks. Separate paragraphs, titles and list items with a blank line."
+        "Titles must be bold and 20px, subtitles must be bold and 18px, paragraphs must be 16px."
         
         User question: {question}
         Sql query result: {sql_query_result}
@@ -136,6 +132,9 @@ class ExplanatorTool(BaseTool):
         Do not make any extra explanation. Only give an answer for the question.
         """
 
-        response = self.llm.invoke(input=prompt)
-        content = response.content
-        return content.strip()
+        # response = self.llm.invoke(input=prompt)
+        # content = response.content
+        # return content.strip()
+
+        async for chunk in self.llm.astream(input=prompt):
+            yield chunk.content

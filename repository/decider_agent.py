@@ -19,12 +19,15 @@ class DeciderAgent:
         
         Question: "{question}"
         
-        Answer only with "Database" or "Web".
+        Answer only with "Database" or "Web". No third choice.
         """
 
         classification_result = self.llm.invoke(input=classification_prompt)
         classification = classification_result.content.strip().lower()
-
+        print(
+            classification,
+            "classificationclassificationclassificationclassificationclassificationclassificationclassificationclassification",
+        )
         if classification == "database":
             return "database"
         elif classification == "web":
@@ -33,20 +36,20 @@ class DeciderAgent:
             # Fallback logic if classification is ambiguous or uncertain
             return "both"
 
-    async def execute(self, question: str):
-        decision = self.decide_agent(question)
-        if decision == "database":
-            return self.database_agent.execute(question)
-        elif decision == "web":
-            return await self.web_agent.answer_stream(question)
-        else:
-            # If both agents could handle it, run both and combine their results
-            db_result = self.database_agent.execute(question)
-            async for web_chunk in self.web_agent.answer_stream(question):
-                db_result += f"\n\n{web_chunk}"
-            return db_result
+    # async def execute(self, question: str):
+    #     decision = self.decide_agent(question)
+    #     if decision == "database":
+    #         return self.database_agent.execute(question)
+    #     elif decision == "web":
+    #         return await self.web_agent.answer_stream(question)
+    #     else:
+    #         # If both agents could handle it, run both and combine their results
+    #         db_result = self.database_agent.execute(question)
+    #         async for web_chunk in self.web_agent.answer_stream(question):
+    #             db_result += f"\n\n{web_chunk}"
+    #         return db_result
 
-    async def stream(self, question: str):
+    async def answer_stream(self, question: str):
         decision = self.decide_agent(question)
         if decision == "database":
             yield self.database_agent.execute(question)
