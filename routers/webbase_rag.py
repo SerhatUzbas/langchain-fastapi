@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 
+from repository.decider_agent import DeciderAgent
 from repository.pdf_summary import PdfSummary
 from repository.webbase_rag import WebLoaderRag
 
@@ -20,7 +21,8 @@ async def get():
 async def event_stream(request: Request, input: str):
 
     async def event_generator():
-        async for chunk in WebLoaderRag.answer_stream(input=input):
+        # async for chunk in WebLoaderRag.answer_stream(input=input):
+        async for chunk in DeciderAgent.answer_stream(input=input):
             if await request.is_disconnected():
                 break
             yield f"data: {chunk}\n\n"
