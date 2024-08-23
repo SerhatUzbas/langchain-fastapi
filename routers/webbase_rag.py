@@ -1,3 +1,4 @@
+import os
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 
@@ -10,6 +11,8 @@ router = APIRouter(
     tags=["webbase_rag"],
 )
 
+SQLALCHEMY_DATABASE_URL = os.environ["SQLALCHEMY_DATABASE_URL"]
+
 
 @router.get("/")
 async def get():
@@ -21,8 +24,9 @@ async def get():
 async def event_stream(request: Request, input: str):
 
     async def event_generator():
-        # async for chunk in WebLoaderRag.answer_stream(input=input):
-        async for chunk in DeciderAgent.answer_stream(input=input):
+        decideragent = DeciderAgent(SQLALCHEMY_DATABASE_URL)
+
+        async for chunk in decideragent.answer_stream(question=input):
             if await request.is_disconnected():
                 break
             yield f"data: {chunk}\n\n"

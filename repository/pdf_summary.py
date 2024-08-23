@@ -20,7 +20,9 @@ embedding_cache_path = os.path.join(repo_dir, "embedding_cache.json")
 class PdfSummary:
     _path = os.path.normpath(file_path)
 
+    # _llm = ChatOllama(model="llama3")
     _llm = ChatOllama(model="llama3")
+
     _system_prompt = (
         "You are an experienced content creator."
         "Use the following pieces of retrieved context to create a blog post in HTML format."

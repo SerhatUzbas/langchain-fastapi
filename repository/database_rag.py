@@ -81,6 +81,7 @@ class SQLDatabaseAgent:
         self.max_iterations = 5
 
     async def execute(self, question: str):
+        print("db_Excute")
         schema_info, table_names = self.schema_tool.run({})
         iteration = 0
         last_error = ""
@@ -95,8 +96,8 @@ class SQLDatabaseAgent:
                     "error": last_error,
                 }
             )
-            # print("\nGenerated SQL Query:")
-            # print(sql_query)
+            print("\nGenerated SQL Query:")
+            print(sql_query)
 
             query_result = self.query_checker_tool.run({"query": sql_query})
 
