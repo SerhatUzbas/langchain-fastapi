@@ -1,6 +1,6 @@
 import os
 from langchain_community.chat_models import ChatOllama
-import os
+
 
 from langchain_community.agent_toolkits.gitlab.toolkit import GitLabToolkit
 from langchain_community.utilities.gitlab import GitLabAPIWrapper
@@ -25,7 +25,7 @@ class GitlabAgent:
             You have the software engineering capabilities of a Google Principle engineer. 
             You are tasked with get request from users about repository and solve the problems based on request. 
             You MUST find the what the problem is, locate the error (or code which must be changed) and fix (or refactor it) through user request.
-            At last,if user request changes, you must open merge request which contains your changes to merge base branch.
+            At last, you must open merge request which contains your changes to merge base branch.
             """
         )
         self.gitlab = GitLabAPIWrapper(
